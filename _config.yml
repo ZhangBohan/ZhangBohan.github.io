@@ -70,6 +70,8 @@ duoshuo_shortname: nengzhe
 
 # title, chinese available
 links_title: 友情链接
+links:
+  
 
 # Deployment
 ## Docs: http://hexo.io/docs/deployment.html
