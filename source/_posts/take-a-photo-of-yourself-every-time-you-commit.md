@@ -27,6 +27,15 @@ end
 exit 0
 ```
 
+为这个文件添加可执行权限：
+```
+chmod +x .git/hooks/post-commit
+```
+
+这样就可以了！😎
+
+----------
+
 你还可以把这些图片合成为视频：[http://www.dayofthenewdan.com/projects/tlassemble](http://www.dayofthenewdan.com/projects/tlassemble)
 
 [我录的视频样例](/static/test.mov)
