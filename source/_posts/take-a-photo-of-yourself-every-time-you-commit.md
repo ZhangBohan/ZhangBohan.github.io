@@ -38,6 +38,6 @@ chmod +x .git/hooks/post-commit
 
 你还可以把这些图片合成为视频：[http://www.dayofthenewdan.com/projects/tlassemble](http://www.dayofthenewdan.com/projects/tlassemble)
 
-[我录的视频样例](/static/test.mov)
+[我录的视频样例](http://7d9pyw.com1.z0.glb.clouddn.com/2015-11-26T23:49:57.198500_test.mov)
 
 原文链接：[Take a photo of yourself every time you commit](https://coderwall.com/p/xlatfq/take-a-photo-of-yourself-every-time-you-commit?p=1&q=)
