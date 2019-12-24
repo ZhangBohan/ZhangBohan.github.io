@@ -1,4 +1,4 @@
-title: title=接口测试框架Karate入门
+title: 接口测试框架Karate入门
 date: 2019-11-23 23:37:55
 tags: api-test, test, bdd
 ---

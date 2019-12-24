@@ -1,4 +1,4 @@
-title: title=数据库版本管理工具Liquibase
+title: 数据库版本管理工具Liquibase
 date: 2019-12-24 23:34:26
 tags: database, migrate, java
 ---
