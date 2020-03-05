@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 3.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('http://bohanzhang.com').hostname,
+    root: '/',
+    scheme: 'Muse',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="首先找到MySQL的配置文件my.cnf，在[mysqld]下添加 1general_log_file=~/query.log 同时，登录MySQL console中设置打开log 123mysql -uroot&amp;gt; SET global general_log = 1; 重启MySQL之后就可以在当前用户的HOME目录中通过query.log查看SQL日志了。 例如，当你执行use mysq">
+<meta name="keywords" content="MySQL,LOG">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何打开MySQL查询日志？">
+<meta property="og:url" content="http://bohanzhang.com/2015/07/29/open-mysql-query-log/index.html">
+<meta property="og:site_name" content="伯函的窝">
+<meta property="og:description" content="首先找到MySQL的配置文件my.cnf，在[mysqld]下添加 1general_log_file=~/query.log 同时，登录MySQL console中设置打开log 123mysql -uroot&amp;gt; SET global general_log = 1; 重启MySQL之后就可以在当前用户的HOME目录中通过query.log查看SQL日志了。 例如，当你执行use mysq">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:updated_time" content="2020-03-05T13:17:08.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何打开MySQL查询日志？">
+<meta name="twitter:description" content="首先找到MySQL的配置文件my.cnf，在[mysqld]下添加 1general_log_file=~/query.log 同时，登录MySQL console中设置打开log 123mysql -uroot&amp;gt; SET global general_log = 1; 重启MySQL之后就可以在当前用户的HOME目录中通过query.log查看SQL日志了。 例如，当你执行use mysq">
+
+<link rel="canonical" href="http://bohanzhang.com/2015/07/29/open-mysql-query-log/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>如何打开MySQL查询日志？ | 伯函的窝</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">伯函的窝</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">我本楚狂人，凤歌笑孔丘</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="http://bohanzhang.com/2015/07/29/open-mysql-query-log/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="张伯函">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="伯函的窝">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          如何打开MySQL查询日志？
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2015-07-29 10:30:55" itemprop="dateCreated datePublished" datetime="2015-07-29T10:30:55+08:00">2015-07-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-03-05 21:17:08" itemprop="dateModified" datetime="2020-03-05T21:17:08+08:00">2020-03-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>首先找到MySQL的配置文件<code>my.cnf</code>，在<code>[mysqld]</code>下添加</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">general_log_file</span>=~/query.log</span><br></pre></td></tr></table></figure>
+<p>同时，登录MySQL console中设置打开log</p>
+<figure class="highlight gams"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysql -uroot</span><br><span class="line"></span><br><span class="line">&gt; <span class="keyword">SET</span> global <span class="comment">general_log = 1</span>;</span><br></pre></td></tr></table></figure>
+<p>重启MySQL之后就可以在当前用户的HOME目录中通过<code>query.log</code>查看SQL日志了。</p>
+<p>例如，当你执行<code>use mysql; select * from user;</code></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">150729 11:51:43	   43 Connect	root@localhost on</span><br><span class="line">		   43 Query	<span class="keyword">select</span> @@version_comment <span class="keyword">limit</span> <span class="number">1</span></span><br><span class="line"><span class="number">150729</span> <span class="number">11</span>:<span class="number">51</span>:<span class="number">47</span>	   <span class="number">43</span> <span class="keyword">Query</span>	<span class="keyword">SELECT</span> <span class="keyword">DATABASE</span>()</span><br><span class="line">		   <span class="number">43</span> Init DB	mysql</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Query</span>	<span class="keyword">show</span> <span class="keyword">databases</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Query</span>	<span class="keyword">show</span> <span class="keyword">tables</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	columns_priv</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	db</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	<span class="keyword">event</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	func</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	general_log</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	help_category</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	help_keyword</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	help_relation</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	help_topic</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	innodb_index_stats</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	innodb_table_stats</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	ndb_binlog_index</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	<span class="keyword">plugin</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	proc</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	procs_priv</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	proxies_priv</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	servers</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	slave_master_info</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	slave_relay_log_info</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	slave_worker_info</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	slow_log</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	tables_priv</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	<span class="keyword">time_zone</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	time_zone_leap_second</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	time_zone_name</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	time_zone_transition</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	time_zone_transition_type</span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Field</span> <span class="keyword">List</span>	<span class="keyword">user</span></span><br><span class="line">		   <span class="number">43</span> <span class="keyword">Query</span>	<span class="keyword">select</span> * <span class="keyword">from</span> <span class="keyword">user</span></span><br></pre></td></tr></table></figure>
+<p>参考：<a href="http://stackoverflow.com/questions/6479107/how-to-enable-mysql-query-log" target="_blank" rel="noopener">http://stackoverflow.com/questions/6479107/how-to-enable-mysql-query-log</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/MySQL/" rel="tag"># MySQL</a>
+              <a href="/tags/LOG/" rel="tag"># LOG</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2015/04/02/mysql-server-has-gone-away/" rel="prev" title="MySQL错误 ERROR 2006 (HY000): MySQL server has gone away">
+      <i class="fa fa-chevron-left"></i> MySQL错误 ERROR 2006 (HY000): MySQL server has gone away
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2015/09/28/how-to-set-up-http-authentication-with-nginx-on-ubuntu/" rel="next" title="如何在Ubuntu上通过Nginx设置HTTP认证">
+      如何在Ubuntu上通过Nginx设置HTTP认证 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+  <div id="disqus_thread"></div>
+  <script>
+
+  var disqus_config = function () {
+    this.page.url = window.location.href;
+    this.page.identifier = "如何打开MySQL查询日志？";
+  };
+  (function() { // DON'T EDIT BELOW THIS LINE
+  var d = document, s = d.createElement('script');
+  s.src = 'https://bohan.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">张伯函</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张伯函</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.9.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.6.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/muse.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

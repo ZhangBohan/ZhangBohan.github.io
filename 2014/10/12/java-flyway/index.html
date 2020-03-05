@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 3.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('http://bohanzhang.com').hostname,
+    root: '/',
+    scheme: 'Muse',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="看看自己的项目的那些SQL文件或者干脆连个建表语句都没有的同学是否会有想法把他们管理起来呢？向大家推荐一款非常轻量级的敏捷数据库迁移框架——Flyway。想知道她有什么魅力吗？ Flyway为大家提供了如下的实现方式：  Java API 命令行 Maven Gradle Ant SBT  为了减少描述难度在这里使用了Java API，项目构建方式为Maven，数据库为MySQL 需要环境 Jav">
+<meta name="keywords" content="DB,Java">
+<meta property="og:type" content="article">
+<meta property="og:title" content="java敏捷数据库迁移框架——flyway">
+<meta property="og:url" content="http://bohanzhang.com/2014/10/12/java-flyway/index.html">
+<meta property="og:site_name" content="伯函的窝">
+<meta property="og:description" content="看看自己的项目的那些SQL文件或者干脆连个建表语句都没有的同学是否会有想法把他们管理起来呢？向大家推荐一款非常轻量级的敏捷数据库迁移框架——Flyway。想知道她有什么魅力吗？ Flyway为大家提供了如下的实现方式：  Java API 命令行 Maven Gradle Ant SBT  为了减少描述难度在这里使用了Java API，项目构建方式为Maven，数据库为MySQL 需要环境 Jav">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:updated_time" content="2020-03-05T13:17:08.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="java敏捷数据库迁移框架——flyway">
+<meta name="twitter:description" content="看看自己的项目的那些SQL文件或者干脆连个建表语句都没有的同学是否会有想法把他们管理起来呢？向大家推荐一款非常轻量级的敏捷数据库迁移框架——Flyway。想知道她有什么魅力吗？ Flyway为大家提供了如下的实现方式：  Java API 命令行 Maven Gradle Ant SBT  为了减少描述难度在这里使用了Java API，项目构建方式为Maven，数据库为MySQL 需要环境 Jav">
+
+<link rel="canonical" href="http://bohanzhang.com/2014/10/12/java-flyway/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>java敏捷数据库迁移框架——flyway | 伯函的窝</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">伯函的窝</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">我本楚狂人，凤歌笑孔丘</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="http://bohanzhang.com/2014/10/12/java-flyway/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="张伯函">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="伯函的窝">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          java敏捷数据库迁移框架——flyway
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2014-10-13 01:30:00" itemprop="dateCreated datePublished" datetime="2014-10-13T01:30:00+08:00">2014-10-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-03-05 21:17:08" itemprop="dateModified" datetime="2020-03-05T21:17:08+08:00">2020-03-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>看看自己的项目的那些SQL文件或者干脆连个建表语句都没有的同学是否会有想法把他们管理起来呢？向大家推荐一款非常轻量级的敏捷数据库迁移框架——<a href="http://flywaydb.org/" target="_blank" rel="noopener">Flyway</a>。想知道她有什么魅力吗？</p>
+<p>Flyway为大家提供了如下的实现方式：</p>
+<ul>
+<li>Java API</li>
+<li>命令行</li>
+<li>Maven</li>
+<li>Gradle</li>
+<li>Ant</li>
+<li>SBT</li>
+</ul>
+<p>为了减少描述难度在这里使用了<strong>Java API</strong>，项目构建方式为<strong>Maven</strong>，数据库为<strong>MySQL</strong></p>
+<h2 id="需要环境">需要环境</h2><ul>
+<li><a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html" target="_blank" rel="noopener">Java 6+</a></li>
+<li><a href="http://maven.apache.org/" target="_blank" rel="noopener">Maven 2+</a></li>
+<li><a href="http://dev.mysql.com/downloads/" target="_blank" rel="noopener">MySQL</a></li>
+</ul>
+<h2 id="创建项目">创建项目</h2><p>首先我们要在命令行中使用Maven原型插件执行如下命令</p>
+<pre><code>mvn archetype:generate -B \
+            -<span class="ruby"><span class="constant">DarchetypeGroupId</span>=org.apache.maven.archetypes \
+</span>            -<span class="ruby"><span class="constant">DarchetypeArtifactId</span>=maven-archetype-quickstart \
+</span>            -<span class="ruby"><span class="constant">DarchetypeVersion</span>=<span class="number">1.1</span> \
+</span>            -<span class="ruby"><span class="constant">DgroupId</span>=foo \
+</span>            -<span class="ruby"><span class="constant">DartifactId</span>=bar \
+</span>            -<span class="ruby"><span class="constant">Dversion</span>=<span class="number">1.0</span>-<span class="constant">SNAPSHOT</span> \
+</span>            -<span class="ruby"><span class="constant">Dpackage</span>=foobar</span>
+</code></pre><p>我们已经准备好开始了。当前项目的结构如下</p>
+<pre><code>.
+|<span class="comment">-- pom.xml</span>
+`<span class="comment">-- src</span>
+    |<span class="comment">-- main</span>
+    |   `<span class="comment">-- java</span>
+    |       `<span class="comment">-- foobar</span>
+    |           `<span class="comment">-- App.java</span>
+    `<span class="comment">-- test</span>
+        `<span class="comment">-- java</span>
+            `<span class="comment">-- foobar</span>
+                `<span class="comment">-- AppTest.java</span>
+</code></pre><p>进入创建的项目</p>
+<pre><code><span class="built_in">cd</span> bar
+</code></pre><h2 id="增加Flyway依赖">增加Flyway依赖</h2><p>编辑当前目录下的<code>pom.xml</code>，增加Flyway和MySQL的依赖</p>
+<pre><code><span class="tag">&lt;<span class="title">project</span> <span class="attribute">...</span>&gt;</span>
+    ...
+    <span class="tag">&lt;<span class="title">dependencies</span>&gt;</span>
+        <span class="tag">&lt;<span class="title">dependency</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">groupId</span>&gt;</span>com.googlecode.flyway<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>flyway-core<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">version</span>&gt;</span>2.3<span class="tag">&lt;/<span class="title">version</span>&gt;</span>
+        <span class="tag">&lt;/<span class="title">dependency</span>&gt;</span>
+        <span class="tag">&lt;<span class="title">dependency</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">groupId</span>&gt;</span>mysql<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>mysql-connector-java<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span>
+            <span class="tag">&lt;<span class="title">version</span>&gt;</span>5.1.6<span class="tag">&lt;/<span class="title">version</span>&gt;</span>
+        <span class="tag">&lt;/<span class="title">dependency</span>&gt;</span>
+        ...
+    <span class="tag">&lt;/<span class="title">dependencies</span>&gt;</span>
+    ...
+<span class="tag">&lt;/<span class="title">project</span>&gt;</span>
+</code></pre><h2 id="整合Flyway">整合Flyway</h2><p>现在我们可以将Flyway的代码放入项目中，并配置数据库，例如增加到默认生成的：<code>src/main/java/foobar/App.java</code></p>
+<pre><code><span class="keyword">package</span> foobar;
+
+<span class="keyword">import</span> com.googlecode.flyway.core.Flyway;
+
+<span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">App</span> </span>{
+    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>{
+        <span class="comment">// 创建Flyway实例</span>
+        Flyway flyway = <span class="keyword">new</span> Flyway();
+
+        <span class="comment">// 设置数据库</span>
+        flyway.setDataSource(<span class="string">"jdbc:mysql://localhost:3306/foobar"</span>, <span class="string">"user"</span>, <span class="string">"pass"</span>);
+
+        <span class="comment">// 开始迁移</span>
+        flyway.migrate();
+    }
+}
+</code></pre><h2 id="让我们创建第一个数据迁移吧">让我们创建第一个数据迁移吧</h2><p>创建数据迁移目录<code>src/main/resources/db/migration</code>，执行命令</p>
+<p><code>mkdir -p src/main/resources/db/migration</code></p>
+<p>创建我们的第一个数据迁移<code>src/main/resources/db/migration/V1__Create_person_table.sql</code></p>
+<pre><code>CRETE TABLE person <span class="list">(
+    <span class="keyword">id</span> INT,
+    name VARCHAR<span class="list">(<span class="number">100</span>)</span>
+)</span><span class="comment">;</span>
+</code></pre><h2 id="执行程序">执行程序</h2><p>执行<code>App.java</code>（也可以直接在IDE中执行main方法）</p>
+<p><code>mvn package exec:java -Dexec.mainClass=foobar.App -Dmaven.test.skip=true</code><a href="`-Dmaven.test.skip=true`跳过Test">^1</a></p>
+<p>如果你成功了，应该会得到如下信息</p>
+<pre><code>INFO: Creating Metadata <span class="tag">table</span>: `foobar`.`schema_version`
+Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">20</span>:<span class="number">18</span> AM com<span class="class">.googlecode</span><span class="class">.flyway</span><span class="class">.core</span><span class="class">.command</span><span class="class">.DbMigrate</span> migrate
+INFO: Current version of schema `foobar`: &lt;&lt; Empty Schema &gt;&gt;
+Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">20</span>:<span class="number">18</span> AM com<span class="class">.googlecode</span><span class="class">.flyway</span><span class="class">.core</span><span class="class">.command</span><span class="class">.DbMigrate</span> applyMigration
+INFO: Migrating schema `foobar` to version <span class="number">1</span>
+Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">20</span>:<span class="number">18</span> AM com<span class="class">.googlecode</span><span class="class">.flyway</span><span class="class">.core</span><span class="class">.command</span><span class="class">.DbMigrate</span> logSummary
+INFO: Successfully applied <span class="number">1</span> migration to schema `foobar` (execution <span class="tag">time</span> <span class="number">00</span>:<span class="number">00.194s</span>).
+</code></pre><h2 id="持续增加数据迁移吧">持续增加数据迁移吧</h2><p>假如我们现在需要增加第二个数据迁移，命名为：<code>src/main/resources/db/migration/V2__Add_people.sql</code></p>
+<pre><code><span class="operator"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> person (<span class="keyword">id</span>, <span class="keyword">name</span>) <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">'Axel'</span>);</span>
+<span class="operator"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> person (<span class="keyword">id</span>, <span class="keyword">name</span>) <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">'Mr. Foo'</span>);</span>
+<span class="operator"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> person (<span class="keyword">id</span>, <span class="keyword">name</span>) <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="string">'Ms. Bar'</span>);</span>
+</code></pre><p>执行命令</p>
+<p><code>mvn package exec:java -Dexec.mainClass=foobar.App -Dmaven.test.skip=true</code></p>
+<p>输出如下</p>
+<pre><code>Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">25</span>:<span class="number">00</span> AM com.googlecode.flyway.core.command.DbMigrate migrate
+INFO: Current version of schema `foobar`: <span class="number">1</span>
+Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">25</span>:<span class="number">00</span> AM com.googlecode.flyway.core.command.DbMigrate applyMigration
+INFO: Migrating schema `foobar` to version <span class="number">2</span>
+Feb <span class="number">27</span>, <span class="number">2014</span> <span class="number">12</span>:<span class="number">25</span>:<span class="number">00</span> AM com.googlecode.flyway.core.command.DbMigrate logSummary
+INFO: Successfully applied <span class="number">1</span> migration to schema `foobar` (execution time <span class="number">00</span>:<span class="number">00.047</span>s).
+</code></pre><p>##总结<br>通过Flyway让我们能很方便的管理数据库文件，并进行版本控制。<a href="http://flywaydb.org/documentation/api.html" target="_blank" rel="noopener">文档地址</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/DB/" rel="tag"># DB</a>
+              <a href="/tags/Java/" rel="tag"># Java</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2014/05/19/chrome-packaged-app-bug/" rel="prev" title="Chrome Packaged App的一些坑">
+      <i class="fa fa-chevron-left"></i> Chrome Packaged App的一些坑
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2014/10/30/register-code/" rel="next" title="手机短信验证">
+      手机短信验证 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+  <div id="disqus_thread"></div>
+  <script>
+
+  var disqus_config = function () {
+    this.page.url = window.location.href;
+    this.page.identifier = "java敏捷数据库迁移框架——flyway";
+  };
+  (function() { // DON'T EDIT BELOW THIS LINE
+  var d = document, s = d.createElement('script');
+  s.src = 'https://bohan.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#需要环境"><span class="nav-number">1.</span> <span class="nav-text">需要环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建项目"><span class="nav-number">2.</span> <span class="nav-text">创建项目</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#增加Flyway依赖"><span class="nav-number">3.</span> <span class="nav-text">增加Flyway依赖</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#整合Flyway"><span class="nav-number">4.</span> <span class="nav-text">整合Flyway</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#让我们创建第一个数据迁移吧"><span class="nav-number">5.</span> <span class="nav-text">让我们创建第一个数据迁移吧</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#执行程序"><span class="nav-number">6.</span> <span class="nav-text">执行程序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#持续增加数据迁移吧"><span class="nav-number">7.</span> <span class="nav-text">持续增加数据迁移吧</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">张伯函</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张伯函</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.9.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.6.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/muse.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 3.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('http://bohanzhang.com').hostname,
+    root: '/',
+    scheme: 'Muse',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="手机的普及程度在中国远高于邮箱，以手机作为密码找回也非常的简单和易用，尤其是手机应用更是可以直接读取用户的手机短信实现免输入就可以完成验证，所以现在的应用中越来越多的使用到了短信验证。 当用户注册成大概的流程如下：  输入手机号，点击发送验证码 用户接收到验证码后输入到验证框  用户要做的事情就是输入手机号、点击发送验证码按钮、输入验证码，就完成了手机绑定。 那么在短信验证中服务器做了什么呢？">
+<meta name="keywords" content="Java,Redis,Coding">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手机短信验证">
+<meta property="og:url" content="http://bohanzhang.com/2014/10/30/register-code/index.html">
+<meta property="og:site_name" content="伯函的窝">
+<meta property="og:description" content="手机的普及程度在中国远高于邮箱，以手机作为密码找回也非常的简单和易用，尤其是手机应用更是可以直接读取用户的手机短信实现免输入就可以完成验证，所以现在的应用中越来越多的使用到了短信验证。 当用户注册成大概的流程如下：  输入手机号，点击发送验证码 用户接收到验证码后输入到验证框  用户要做的事情就是输入手机号、点击发送验证码按钮、输入验证码，就完成了手机绑定。 那么在短信验证中服务器做了什么呢？">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:updated_time" content="2020-03-05T13:17:08.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="手机短信验证">
+<meta name="twitter:description" content="手机的普及程度在中国远高于邮箱，以手机作为密码找回也非常的简单和易用，尤其是手机应用更是可以直接读取用户的手机短信实现免输入就可以完成验证，所以现在的应用中越来越多的使用到了短信验证。 当用户注册成大概的流程如下：  输入手机号，点击发送验证码 用户接收到验证码后输入到验证框  用户要做的事情就是输入手机号、点击发送验证码按钮、输入验证码，就完成了手机绑定。 那么在短信验证中服务器做了什么呢？">
+
+<link rel="canonical" href="http://bohanzhang.com/2014/10/30/register-code/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>手机短信验证 | 伯函的窝</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">伯函的窝</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">我本楚狂人，凤歌笑孔丘</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="http://bohanzhang.com/2014/10/30/register-code/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="张伯函">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="伯函的窝">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手机短信验证
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2014-10-30 10:50:00" itemprop="dateCreated datePublished" datetime="2014-10-30T10:50:00+08:00">2014-10-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-03-05 21:17:08" itemprop="dateModified" datetime="2020-03-05T21:17:08+08:00">2020-03-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>手机的普及程度在中国远高于邮箱，以手机作为密码找回也非常的简单和易用，尤其是手机应用更是可以直接读取用户的手机短信实现免输入就可以完成验证，所以现在的应用中越来越多的使用到了短信验证。</p>
+<p>当用户注册成大概的流程如下：</p>
+<ol>
+<li>输入手机号，点击发送验证码</li>
+<li>用户接收到验证码后输入到验证框</li>
+</ol>
+<p>用户要做的事情就是输入手机号、点击发送验证码按钮、输入验证码，就完成了手机绑定。</p>
+<p>那么在短信验证中服务器做了什么呢？</p>
+<ol>
+<li>向服务器发送<code>Ajax</code>请求，把用户输入的手机号发送回服务器（用户点击发送验证码后）</li>
+<li>服务器验证手机号的合法性</li>
+<li>生成随机码、同时将随机码以手机号为键保存到服务器中,并设置过期时间</li>
+<li>发送短信给用户</li>
+<li>用户收到短信后会输入到验证框</li>
+<li>用户提交表单时验证随机码是否正确</li>
+</ol>
+<h2 id="向服务器发送Ajax请求">向服务器发送Ajax请求</h2><p>发送<code>Ajax</code>请求这步比较简单，直接直接用<code>Jquery</code>发送请求并取得结果，代码样例如下：</p>
+<pre><code>$.ajax(<span class="string">'/auth/verify/13888888888'</span>).done(<span class="function"><span class="keyword">function</span> (<span class="params">code</span>) </span>{
+    alert(code);
+});
+</code></pre><h2 id="服务器验证手机号的合法性">服务器验证手机号的合法性</h2><p>这一步通常使用正则表达式验证是否是有效的11位的手机号：</p>
+<pre><code>/<span class="number">1</span>[<span class="number">3458</span>]\d{<span class="number">9</span>}/g
+</code></pre><p>上面的规则是第一位必需是1，第二位必需在3、4、5、8中，后面带9位数字，这样就确认用户输入一定是11位的手机号了。这些验证码一般都是根据国情而定的，例如4G手机就开始启用<code>170</code>的号段，那这样的验证就不合适了，<strong>解决办法：放松验证条件或与时俱进保持更新</strong></p>
+<h2 id="生成随机码、同时将随机码以手机号为键保存到服务器中,并设置过期时间">生成随机码、同时将随机码以手机号为键保存到服务器中,并设置过期时间</h2><p>生成的随机码一般为了对用户友好可以直接生成四位的数字随机数，例如：1234等。我使用的是<code>Apache</code>的<code>commons.lang</code>包进行生成：</p>
+<pre><code>RandomStringUtils.<span class="built_in">random</span>(<span class="number">4</span>, <span class="literal">false</span>, <span class="literal">true</span>)<span class="comment">;</span>
+</code></pre><p>将随机码以手机号为键保存到服务器中,并设置过期时间这个看个人喜好，推荐直接存入缓存服务中，<strong>项目中的内存缓存除外，如<code>ehcahe</code></strong>。不推荐把随机码直接存到项目内存中，如果期间进行服务器部署会导致验证码全部失效。</p>
+<p>我使用的方法是使用<code>Redis</code>进行保存</p>
+<pre><code><span class="keyword">String</span> phone = <span class="string">"138123456789"</span>;
+Jedis jedis = <span class="keyword">new</span> Jedis(<span class="string">"localhost"</span>);
+
+<span class="keyword">String</span> <span class="variable">key</span> = <span class="string">"verifies:"</span> + phone;
+
+<span class="keyword">String</span> verifyCode = RandomStringUtils.<span class="built_in">random</span>(<span class="number">4</span>, <span class="keyword">false</span>, <span class="keyword">true</span>);
+
+jedis.<span class="built_in">set</span>(<span class="variable">key</span>, verifyCode);
+jedis.expire(<span class="variable">key</span>, <span class="number">60</span> * <span class="number">5</span>); <span class="comment">// 五分钟内有效</span>
+</code></pre><p>##发送短信给用户</p>
+<p>如何在程序中发送短信给用户呢？我们的程序并没有发送短信到用户手机中的能力，通过需要接入第三方的短信服务提供商，通过调用第三方接口来实现发送短信的功能：</p>
+<p><strong>首先要找到短信服务提供商，接入短信服务</strong></p>
+<p>开发人员通过短信服务提供商提供的接口调通调用服务</p>
+<p>发送验证码的过程如下：</p>
+<ol>
+<li>网站（手机）请求发送信息</li>
+<li>服务器向短信服务提供商通信，提交发送请求</li>
+<li>短信服务提供商通过运营商将信息发送到用户的手机中</li>
+</ol>
+<p>##用户收到短信后会输入到验证框</p>
+<p>以下就没有什么难度了，用户收到短信后会输入到验证框，这时可以等待用户提交表单后验证</p>
+<h2 id="需要注意的问题">需要注意的问题</h2><ol>
+<li>手机正则过期，不能配置最新的手机号码。保证正则一直可用</li>
+<li>生成的随机码不要直接在请求时返回到浏览器中，这样会导致非普通用户可以简单获取到验证码批量注册用户</li>
+<li>发短信的频率一定要做限制，服务提供商通常都会每条信息收取几分钱</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java/" rel="tag"># Java</a>
+              <a href="/tags/Redis/" rel="tag"># Redis</a>
+              <a href="/tags/Coding/" rel="tag"># Coding</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2014/10/12/java-flyway/" rel="prev" title="java敏捷数据库迁移框架——flyway">
+      <i class="fa fa-chevron-left"></i> java敏捷数据库迁移框架——flyway
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2015/04/02/mysql-server-has-gone-away/" rel="next" title="MySQL错误 ERROR 2006 (HY000): MySQL server has gone away">
+      MySQL错误 ERROR 2006 (HY000): MySQL server has gone away <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+  <div id="disqus_thread"></div>
+  <script>
+
+  var disqus_config = function () {
+    this.page.url = window.location.href;
+    this.page.identifier = "手机短信验证";
+  };
+  (function() { // DON'T EDIT BELOW THIS LINE
+  var d = document, s = d.createElement('script');
+  s.src = 'https://bohan.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#向服务器发送Ajax请求"><span class="nav-number">1.</span> <span class="nav-text">向服务器发送Ajax请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#服务器验证手机号的合法性"><span class="nav-number">2.</span> <span class="nav-text">服务器验证手机号的合法性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#生成随机码、同时将随机码以手机号为键保存到服务器中,并设置过期时间"><span class="nav-number">3.</span> <span class="nav-text">生成随机码、同时将随机码以手机号为键保存到服务器中,并设置过期时间</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#需要注意的问题"><span class="nav-number">4.</span> <span class="nav-text">需要注意的问题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">张伯函</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张伯函</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.9.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.6.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/muse.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

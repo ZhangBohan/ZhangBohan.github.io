@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 3.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('http://bohanzhang.com').hostname,
+    root: '/',
+    scheme: 'Muse',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="MySQL下当我导入一个比较大的SQL文件时出现了ERROR 2006 (HY000): MySQL server has gone away错误，具体情况如下： 12345&amp;gt;  ll *.sql-rwxr-xr-x@ 1 bohan  staff    27M Mar 26 18:08 91620_all.sql&amp;gt; mysql test &amp;lt; 91620_all.sqlERROR">
+<meta name="keywords" content="MySQL,DEBUG">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL错误 ERROR 2006 (HY000): MySQL server has gone away">
+<meta property="og:url" content="http://bohanzhang.com/2015/04/02/mysql-server-has-gone-away/index.html">
+<meta property="og:site_name" content="伯函的窝">
+<meta property="og:description" content="MySQL下当我导入一个比较大的SQL文件时出现了ERROR 2006 (HY000): MySQL server has gone away错误，具体情况如下： 12345&amp;gt;  ll *.sql-rwxr-xr-x@ 1 bohan  staff    27M Mar 26 18:08 91620_all.sql&amp;gt; mysql test &amp;lt; 91620_all.sqlERROR">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:updated_time" content="2020-03-05T13:17:08.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MySQL错误 ERROR 2006 (HY000): MySQL server has gone away">
+<meta name="twitter:description" content="MySQL下当我导入一个比较大的SQL文件时出现了ERROR 2006 (HY000): MySQL server has gone away错误，具体情况如下： 12345&amp;gt;  ll *.sql-rwxr-xr-x@ 1 bohan  staff    27M Mar 26 18:08 91620_all.sql&amp;gt; mysql test &amp;lt; 91620_all.sqlERROR">
+
+<link rel="canonical" href="http://bohanzhang.com/2015/04/02/mysql-server-has-gone-away/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>MySQL错误 ERROR 2006 (HY000): MySQL server has gone away | 伯函的窝</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">伯函的窝</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">我本楚狂人，凤歌笑孔丘</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="http://bohanzhang.com/2015/04/02/mysql-server-has-gone-away/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="张伯函">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="伯函的窝">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL错误 ERROR 2006 (HY000): MySQL server has gone away
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2015-04-02 10:33:46" itemprop="dateCreated datePublished" datetime="2015-04-02T10:33:46+08:00">2015-04-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-03-05 21:17:08" itemprop="dateModified" datetime="2020-03-05T21:17:08+08:00">2020-03-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>MySQL下当我导入一个比较大的SQL文件时出现了<code>ERROR 2006 (HY000): MySQL server has gone away</code>错误，具体情况如下：</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&gt;  ll *.sql</span><br><span class="line">-rwxr-xr-x@ 1 bohan  staff    27M Mar 26 18:08 91620_all.sql</span><br><span class="line"></span><br><span class="line">&gt; mysql test &lt; 91620_all.sql</span><br><span class="line"><span class="builtin-name">ERROR</span> 2006 (HY000) at line 17128: MySQL<span class="built_in"> server </span>has gone away</span><br></pre></td></tr></table></figure>
+<p>上面可以看到，文件大小为27M导入的时候会报这个错误。</p>
+<h2 id="错误原因">错误原因</h2><blockquote>
+<p>If you are using the mysql client program, its default max_allowed_packet variable is 16MB. To set a larger value, start mysql like this:</p>
+</blockquote>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">shell</span><span class="bash">&gt; mysql --max_allowed_packet=32M</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>That sets the packet size to 32MB.</p>
+</blockquote>
+<p>我们通过MySQL<a href="https://dev.mysql.com/doc/refman/5.1/en/packet-too-large.html" target="_blank" rel="noopener">相关文档</a>可以发现默认大小是16M。</p>
+<h2 id="解决方法">解决方法</h2><p>所有大于16M的SQL文件都会报这个错误。</p>
+<p>不过我们可以直接通过命令后增加<code>--max_allowed_packet=32M</code>解决</p>
+<p>或者登录MySQL客户端，修改<a href="http://dev.mysql.com/doc/refman/5.5/en/server-system-variables.html#sysvar_max_allowed_packet" target="_blank" rel="noopener">系统变量</a>：</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; ssh mysql</span><br><span class="line">mysql&gt; <span class="builtin-name">set</span> GLOBAL <span class="attribute">max_allowed_packet</span>=32*1024*1024;</span><br></pre></td></tr></table></figure>
+<p>我们也可以通过修改MySQL配置<code>my.cnf</code>文件，在最后一行增加<code>max_allowed_packet=32M</code>就可以了</p>
+<p>MySQL配置文件的位置：</p>
+<ul>
+<li>Windows下 <code>C:\ProgamData\MySQL\MySQL Server5.6</code></li>
+<li>Linux下 <code>/etc/mysql</code></li>
+<li>Mac下通过brew安装 <code>/usr/local/Cellar/mysql/5.6.23</code></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/MySQL/" rel="tag"># MySQL</a>
+              <a href="/tags/DEBUG/" rel="tag"># DEBUG</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2014/10/30/register-code/" rel="prev" title="手机短信验证">
+      <i class="fa fa-chevron-left"></i> 手机短信验证
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2015/07/29/open-mysql-query-log/" rel="next" title="如何打开MySQL查询日志？">
+      如何打开MySQL查询日志？ <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+  <div id="disqus_thread"></div>
+  <script>
+
+  var disqus_config = function () {
+    this.page.url = window.location.href;
+    this.page.identifier = "MySQL错误 ERROR 2006 (HY000): MySQL server has gone away";
+  };
+  (function() { // DON'T EDIT BELOW THIS LINE
+  var d = document, s = d.createElement('script');
+  s.src = 'https://bohan.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#错误原因"><span class="nav-number">1.</span> <span class="nav-text">错误原因</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#解决方法"><span class="nav-number">2.</span> <span class="nav-text">解决方法</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">张伯函</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张伯函</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.9.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.6.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/muse.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 3.9.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('http://bohanzhang.com').hostname,
+    root: '/',
+    scheme: 'Muse',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":false},
+    bookmark: {"enable":false,"color":"#222","save":"auto"},
+    fancybox: false,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: '',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="研发过程中经常涉及到数据库变更，对表结构的修复及对数据的修改，为了保证各环境都能正确的进行变更我们可能需要维护一个数据库升级文档来保存这些记录，有需要升级的环境按文档进行升级。 这样手工维护有几个缺点：  无法保证每个环境都按要求执行 遇到问题不一定有相对的回滚语句 无法自动化  为了解决这些问题，我们进行了一些调研，主要调研对象是Liquibase和Flyway，我们希望通过数据库版本管理工具">
+<meta name="keywords" content="database, migrate, java">
+<meta property="og:type" content="article">
+<meta property="og:title" content="数据库版本管理工具Liquibase">
+<meta property="og:url" content="http://bohanzhang.com/2019/12/24/title-数据库版本管理工具Liquibase/index.html">
+<meta property="og:site_name" content="伯函的窝">
+<meta property="og:description" content="研发过程中经常涉及到数据库变更，对表结构的修复及对数据的修改，为了保证各环境都能正确的进行变更我们可能需要维护一个数据库升级文档来保存这些记录，有需要升级的环境按文档进行升级。 这样手工维护有几个缺点：  无法保证每个环境都按要求执行 遇到问题不一定有相对的回滚语句 无法自动化  为了解决这些问题，我们进行了一些调研，主要调研对象是Liquibase和Flyway，我们希望通过数据库版本管理工具">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://image.1programmer.com/2019-12-24-15772015720671.jpg">
+<meta property="og:updated_time" content="2020-03-05T13:17:08.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="数据库版本管理工具Liquibase">
+<meta name="twitter:description" content="研发过程中经常涉及到数据库变更，对表结构的修复及对数据的修改，为了保证各环境都能正确的进行变更我们可能需要维护一个数据库升级文档来保存这些记录，有需要升级的环境按文档进行升级。 这样手工维护有几个缺点：  无法保证每个环境都按要求执行 遇到问题不一定有相对的回滚语句 无法自动化  为了解决这些问题，我们进行了一些调研，主要调研对象是Liquibase和Flyway，我们希望通过数据库版本管理工具">
+<meta name="twitter:image" content="https://image.1programmer.com/2019-12-24-15772015720671.jpg">
+
+<link rel="canonical" href="http://bohanzhang.com/2019/12/24/title-数据库版本管理工具Liquibase/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true,
+    isPage: false,
+    isArchive: false
+  };
+</script>
+
+  <title>数据库版本管理工具Liquibase | 伯函的窝</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">伯函的窝</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">我本楚狂人，凤歌笑孔丘</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="http://bohanzhang.com/2019/12/24/title-数据库版本管理工具Liquibase/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="张伯函">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="伯函的窝">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          数据库版本管理工具Liquibase
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2019-12-24 23:34:26" itemprop="dateCreated datePublished" datetime="2019-12-24T23:34:26+08:00">2019-12-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-03-05 21:17:08" itemprop="dateModified" datetime="2020-03-05T21:17:08+08:00">2020-03-05</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img src="https://image.1programmer.com/2019-12-24-15772015720671.jpg" alt></p>
+<p>研发过程中经常涉及到数据库变更，对表结构的修复及对数据的修改，为了保证各环境都能正确的进行变更我们可能需要维护一个数据库升级文档来保存这些记录，有需要升级的环境按文档进行升级。</p>
+<p>这样手工维护有几个缺点：</p>
+<ol>
+<li>无法保证每个环境都按要求执行</li>
+<li>遇到问题不一定有相对的回滚语句</li>
+<li>无法自动化</li>
+</ol>
+<p>为了解决这些问题，我们进行了一些调研，主要调研对象是Liquibase和Flyway，我们希望通过数据库版本管理工具实现以下几个目标：</p>
+<ol>
+<li>数据库升级</li>
+<li>数据库回滚</li>
+<li>版本标记</li>
+</ol>
+<p>调研过程中发现Flyway据库回滚功能是增值功能且实现逻辑是通过我们的升级脚本来进行“智能”降级，不符合我们目前的使用场景，Flyway相关的介绍可以看我早期的另一篇介绍：<a href="https://segmentfault.com/a/1190000000422670" target="_blank" rel="noopener">https://segmentfault.com/a/1190000000422670</a></p>
+<h2 id="Liquibase">Liquibase</h2><blockquote>
+<p>Liquibase帮助团队跟踪、版本化及部署数据库架构和逻辑修改</p>
+</blockquote>
+<h3 id="安装">安装</h3><h4 id="检查JRE">检查JRE</h4><figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ java -version</span><br><span class="line">java version <span class="string">"1.8.0_231"</span></span><br><span class="line">Java(TM) SE Runtime Environment (build 1.8.0_231-b11)</span><br><span class="line">Java HotSpot(TM) 64-Bit<span class="built_in"> Server </span>VM (build 25.231-b11, mixed mode)</span><br></pre></td></tr></table></figure>
+<p>如果没有安装Java请自行安装</p>
+<h4 id="安装Liquibase">安装Liquibase</h4><p>下载<a href="https://download.liquibase.org/download/" target="_blank" rel="noopener">Liquibase-Version#-bin.tar.gz 文件</a>，<br>解压压缩包，将目录添加到环境变量中</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="builtin-name">export</span> <span class="attribute">PATH</span>=<span class="string">"/opt/liquibase-3.8.2:<span class="variable">$PATH</span>"</span></span><br></pre></td></tr></table></figure>
+<p>这个命令重新启动命令行就不会生效了，如果要保证一直可用需要将这个领先设置到<code>.bashrc</code>或者<code>.zshrc</code>中</p>
+<p>通过运行帮助命令验证安装</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">$</span> <span class="string">liquibase</span> <span class="string">--help</span></span><br><span class="line"><span class="number">17</span><span class="string">:12:10.389</span> <span class="string">[main]</span> <span class="string">DEBUG</span> <span class="string">liquibase.resource.ClassLoaderResourceAccessor</span> <span class="bullet">-</span> <span class="string">Opening</span> <span class="string">jar:file:/opt/liquibase-3.8.2/liquibase.jar!/liquibase.build.properties</span> <span class="string">as</span> <span class="string">liquibase.build.properties</span></span><br><span class="line"><span class="string">Starting</span> <span class="string">Liquibase</span> <span class="string">at</span> <span class="string">星期三,</span> <span class="number">04</span> <span class="string">十二月</span> <span class="number">2019</span> <span class="number">17</span><span class="string">:12:10</span> <span class="string">CST</span> <span class="string">(version</span> <span class="number">3.8</span><span class="number">.2</span> <span class="comment">#26 built at Tue Nov 26 04:53:39 UTC 2019)</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="attr">Usage:</span> <span class="string">java</span> <span class="string">-jar</span> <span class="string">liquibase.jar</span> <span class="string">[options]</span> <span class="string">[command]</span></span><br><span class="line"></span><br><span class="line"><span class="attr">Standard Commands:</span></span><br><span class="line"><span class="string">...</span></span><br></pre></td></tr></table></figure>
+<h4 id="配置文件">配置文件</h4><p>下面是以mysql为例的配置文件</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ cat liquibase.properties</span><br><span class="line"><span class="string">driver:</span> com.mysql.cj.jdbc.Driver</span><br><span class="line"><span class="string">classpath:</span> ./mysql-connector-java<span class="number">-8.0</span><span class="number">.18</span>.jar</span><br><span class="line"><span class="string">url:</span> <span class="string">jdbc:</span><span class="string">mysql:</span><span class="comment">//127.0.0.1/test</span></span><br><span class="line"><span class="string">username:</span> root</span><br><span class="line"><span class="string">password:</span> <span class="number">123456</span></span><br><span class="line"><span class="string">changeLogFile:</span> myChangeLog.xml</span><br></pre></td></tr></table></figure>
+<h3 id="数据库升级">数据库升级</h3><p>创建<code>myChangeLog.xml</code>文件，这个文件用来记录升级记录升级信息，初始化的内容</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ cat myChangeLog.xml</span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">databaseChangeLog</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog</span></span></span><br><span class="line"><span class="tag"><span class="string">         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">databaseChangeLog</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>Liquibase支持通过SQL描述的方式来创建数据库</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">$ cat myChangeLog.xml</span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">databaseChangeLog</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog</span></span></span><br><span class="line"><span class="tag"><span class="string">         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">changeSet</span> <span class="attr">id</span>=<span class="string">"1.0"</span> <span class="attr">author</span>=<span class="string">"bohan"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">sql</span>&gt;</span></span><br><span class="line">        CREATE TABLE `deparment` (</span><br><span class="line">        `id` int(11) unsigned NOT NULL AUTO_INCREMENT,</span><br><span class="line">        `name` varchar(100) COLLATE utf8mb4_bin DEFAULT NULL,</span><br><span class="line">        PRIMARY KEY (`id`)</span><br><span class="line">        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;</span><br><span class="line">        <span class="tag">&lt;/<span class="name">sql</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">changeSet</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">databaseChangeLog</span>&gt;</span></span><br><span class="line">$ liquibase update</span><br><span class="line">Liquibase Community 3.8.2 by Datical</span><br><span class="line">Liquibase: Update has been successful.</span><br></pre></td></tr></table></figure>
+<p>通过执行<code>liquibase update</code>进行升级，升级后的数据库如下，已经为我们创建了数据库，同时Liquibase生成了两个表用来管理数据库升级记录</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">$ mysql -h 127.0.0.1 -uroot -p123456 test -e "show tables;"</span><br><span class="line">mysql: [Warning] Using a password on the command line interface can be insecure.</span><br><span class="line"><span class="code">+-----------------------+</span></span><br><span class="line">| Tables<span class="emphasis">_in_</span>test        |</span><br><span class="line"><span class="code">+-----------------------+</span></span><br><span class="line">| DATABASECHANGELOG     |</span><br><span class="line">| DATABASECHANGELOGLOCK |</span><br><span class="line">| deparment             |</span><br><span class="line"><span class="code">+-----------------------+</span></span><br></pre></td></tr></table></figure>
+<p>继续执行升级</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">$ cat myChangeLog.xml</span><br><span class="line">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span><br><span class="line"></span><br><span class="line">&lt;databaseChangeLog</span><br><span class="line"><span class="code">  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"</span></span><br><span class="line"><span class="code">  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"</span></span><br><span class="line"><span class="code">  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog</span></span><br><span class="line"><span class="code">         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd"&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="code">    &lt;changeSet id="1.0" author="bohan"&gt;</span></span><br><span class="line"><span class="code">        &lt;sql&gt;</span></span><br><span class="line"><span class="code">        CREATE TABLE `deparment` (</span></span><br><span class="line"><span class="code">        `id` int(11) unsigned NOT NULL AUTO_INCREMENT,</span></span><br><span class="line"><span class="code">        `name` varchar(100) COLLATE utf8mb4_bin DEFAULT NULL,</span></span><br><span class="line"><span class="code">        PRIMARY KEY (`id`)</span></span><br><span class="line"><span class="code">        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;</span></span><br><span class="line"><span class="code">        &lt;/sql&gt;</span></span><br><span class="line"><span class="code">    &lt;/changeSet&gt;</span></span><br><span class="line"><span class="code">    &lt;changeSet id="1.1" author="bohan"&gt;</span></span><br><span class="line"><span class="code">        &lt;sql&gt;</span></span><br><span class="line"><span class="code">        insert into deparment values(1, "test");</span></span><br><span class="line"><span class="code">        &lt;/sql&gt;</span></span><br><span class="line"><span class="code">    &lt;/changeSet&gt;</span></span><br><span class="line">&lt;/databaseChangeLog&gt;</span><br><span class="line">$ liquibase update</span><br><span class="line">Liquibase Community 3.8.2 by Datical</span><br><span class="line">Liquibase: Update has been successful.</span><br><span class="line">$ mysql -h 127.0.0.1 -uroot -p test -e "select * from deparment;"</span><br><span class="line">Enter password:</span><br><span class="line"><span class="code">+----+</span>------+</span><br><span class="line">| id | name |</span><br><span class="line"><span class="code">+----+</span>------+</span><br><span class="line">|  1 | test |</span><br><span class="line"><span class="code">+----+</span>------+</span><br></pre></td></tr></table></figure>
+<p>数据如预期被添加</p>
+<h4 id="通过SQL文件">通过SQL文件</h4><p>数据库变更也可以通过sql文件形式引用，避免<code>myChangeLog.xml</code>文件过大</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">changeSet</span> <span class="attr">id</span>=<span class="string">"1.1"</span> <span class="attr">author</span>=<span class="string">"bohan"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">sqlFile</span> <span class="attr">path</span>=<span class="string">"./update_deparment_name.sql"</span>&gt;</span><span class="tag">&lt;/<span class="name">sqlFile</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">changeSet</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h3 id="数据库回滚">数据库回滚</h3><figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">liquibase <span class="comment">--help</span></span><br><span class="line">Usage: java -jar liquibase.jar [options] [<span class="keyword">command</span>]</span><br><span class="line"></span><br><span class="line">Standard Commands:</span><br><span class="line"> rollbackCount &lt;<span class="built_in">value</span>&gt;          Rolls back <span class="keyword">the</span> <span class="keyword">last</span> &lt;<span class="built_in">value</span>&gt; change sets</span><br><span class="line">                                applied <span class="built_in">to</span> <span class="keyword">the</span> database</span><br></pre></td></tr></table></figure>
+<p>我们来执行<code>rollbackCount</code>进行回滚</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ liquibase rollbackCount 1</span><br><span class="line">Liquibase<span class="built_in"> Community </span>3.8.2 by Datical</span><br><span class="line">Rolling Back Changeset:myChangeLog.xml::1.0::bohan</span><br><span class="line">Unexpected <span class="builtin-name">error</span> running Liquibase: <span class="literal">No</span> inverse <span class="keyword">to</span> liquibase.change.core.RawSQLChange created</span><br><span class="line"><span class="keyword">For</span> more information, please use the --logLevel flag</span><br></pre></td></tr></table></figure>
+<p>提示没有回滚SQL，修改我们的<code>myChangeLog.xml</code></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">$ cat myChangeLog.xml</span><br><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">databaseChangeLog</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">  <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.liquibase.org/xml/ns/dbchangelog</span></span></span><br><span class="line"><span class="tag"><span class="string">         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">changeSet</span> <span class="attr">id</span>=<span class="string">"1.0"</span> <span class="attr">author</span>=<span class="string">"bohan"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">sql</span>&gt;</span></span><br><span class="line">        CREATE TABLE `deparment` (</span><br><span class="line">        `id` int(11) unsigned NOT NULL AUTO_INCREMENT,</span><br><span class="line">        `name` varchar(100) COLLATE utf8mb4_bin DEFAULT NULL,</span><br><span class="line">        PRIMARY KEY (`id`)</span><br><span class="line">        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;</span><br><span class="line">        <span class="tag">&lt;/<span class="name">sql</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">rollback</span>&gt;</span></span><br><span class="line">        DROP TABLE deparment;</span><br><span class="line">        <span class="tag">&lt;/<span class="name">rollback</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">changeSet</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">changeSet</span> <span class="attr">id</span>=<span class="string">"1.1"</span> <span class="attr">author</span>=<span class="string">"bohan"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">sql</span>&gt;</span></span><br><span class="line">        insert into deparment values(1, "test");</span><br><span class="line">        <span class="tag">&lt;/<span class="name">sql</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">rollback</span>&gt;</span></span><br><span class="line">        DELETE FROM deparment WHERE id = 1;</span><br><span class="line">        <span class="tag">&lt;/<span class="name">rollback</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">changeSet</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">databaseChangeLog</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>执行回滚，发现已经没有新增的记录了</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">liquibase rollbackCount 1</span><br><span class="line">Liquibase<span class="built_in"> Community </span>3.8.2 by Datical</span><br><span class="line">Rolling Back Changeset:myChangeLog.xml::1.1::bohan</span><br><span class="line">Liquibase: Rollback has been successful.</span><br><span class="line">$ mysql -h 127.0.0.1 -uroot -p test -e <span class="string">"select * from deparment;"</span></span><br><span class="line">Enter password:</span><br></pre></td></tr></table></figure>
+<p>再次执行，数据库也如预期被删除</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">$ liquibase rollbackCount 1</span><br><span class="line">Liquibase Community 3.8.2 by Datical</span><br><span class="line">Rolling Back Changeset:myChangeLog.xml::1.0::bohan</span><br><span class="line">Liquibase: Rollback has been successful.</span><br><span class="line">$ mysql -h 127.0.0.1 -uroot -p test -e "show tables;"</span><br><span class="line">Enter password:</span><br><span class="line"><span class="code">+-----------------------+</span></span><br><span class="line">| Tables<span class="emphasis">_in_</span>test        |</span><br><span class="line"><span class="code">+-----------------------+</span></span><br><span class="line">| DATABASECHANGELOG     |</span><br><span class="line">| DATABASECHANGELOGLOCK |</span><br><span class="line"><span class="code">+-----------------------+</span></span><br></pre></td></tr></table></figure>
+<h3 id="版本标记">版本标记</h3><p>Liquibase提供了完善的标签功能，经过刚刚的回滚到上一次操作后我们目前只执行了ID为1.0的变更</p>
+<figure class="highlight jboss-cli"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select * from DATABASECHANGELOG;</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| ID  | AUTHOR | FILENAME        | DATEEXECUTED        | ORDEREXECUTED | EXECTYPE | MD5SUM                             | DESCRIPTION | COMMENTS | TAG  | LIQUIBASE | CONTEXTS | LABELS | DEPLOYMENT_ID |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| 1.0 | bohan  | myChangeLog.xml | 2019-12-05 03<span class="function">:15</span><span class="function">:18</span> |             1 | EXECUTED | 8<span class="function">:fe52f094e795797c89459e8f22483482</span> | sql         |          | NULL | 3.8.2     | NULL     | NULL   | 5515718387    |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">1 row in <span class="keyword">set</span> <span class="params">(0.00 sec)</span></span><br></pre></td></tr></table></figure>
+<p>在实际开发中，我们升级版本时通常会需要同时执行多个变更，如果变量存在问题需要回滚时按数量回滚就比较麻烦了，我们需要对我们的变更进行标签标记，下面可能用到的命令如下：</p>
+<figure class="highlight vim"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">liquibase --<span class="keyword">help</span></span><br><span class="line"><span class="number">11</span>:<span class="number">21</span>:<span class="number">31.994</span> [main] DEBUG liquibase.resource.ClassLoaderResourceAccessor - Opening jar:<span class="keyword">file</span>:/<span class="keyword">opt</span>/liquibase-<span class="number">3.8</span>.<span class="number">2</span>/liquibase.jar!/liquibase.build.properties <span class="keyword">as</span> liquibase.build.properties</span><br><span class="line">Starting Liquibase at 星期四, <span class="number">05</span> 十二月 <span class="number">2019</span> <span class="number">11</span>:<span class="number">21</span>:<span class="number">31</span> CST (<span class="keyword">version</span> <span class="number">3.8</span>.<span class="number">2</span> #<span class="number">26</span> built at Tue Nov <span class="number">26</span> <span class="number">04</span>:<span class="number">53</span>:<span class="number">39</span> UTC <span class="number">2019</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Usage: java -jar liquibase.jar [<span class="keyword">options</span>] [<span class="keyword">command</span>]</span><br><span class="line"></span><br><span class="line">Standard Command<span class="variable">s:</span></span><br><span class="line"> rollback <span class="symbol">&lt;tag&gt;</span>                 Rolls back the database <span class="keyword">to</span> the the state <span class="keyword">is</span> was</span><br><span class="line">Maintenance Commands</span><br><span class="line"> <span class="keyword">tag</span> &lt;<span class="keyword">tag</span> <span class="built_in">string</span>&gt;          <span class="string">'Tags'</span> the current database state <span class="keyword">for</span> future rollback</span><br><span class="line"> tagExists &lt;<span class="keyword">tag</span> <span class="built_in">string</span>&gt;    Checks whether the given <span class="keyword">tag</span> <span class="keyword">is</span> already existing</span><br></pre></td></tr></table></figure>
+<p>针对当前数据库，我们通过<code>liquibase tag</code>进行打标签操作</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ liquibase tag v1.0</span><br><span class="line">Liquibase<span class="built_in"> Community </span>3.8.2 by Datical</span><br><span class="line">Successfully tagged <span class="string">'root@172.17.0.1@jdbc:mysql://127.0.0.1/test'</span></span><br><span class="line">Liquibase command <span class="string">'tag'</span> was executed successfully.</span><br></pre></td></tr></table></figure>
+<p>查看记录发现ID为<code>1.0</code>的记录TAG中已设置为<code>v1.0</code>，符合我们的预期</p>
+<figure class="highlight jboss-cli"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select * from DATABASECHANGELOG;</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| ID  | AUTHOR | FILENAME        | DATEEXECUTED        | ORDEREXECUTED | EXECTYPE | MD5SUM                             | DESCRIPTION | COMMENTS | TAG  | LIQUIBASE | CONTEXTS | LABELS | DEPLOYMENT_ID |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| 1.0 | bohan  | myChangeLog.xml | 2019-12-05 03<span class="function">:15</span><span class="function">:18</span> |             1 | EXECUTED | 8<span class="function">:fe52f094e795797c89459e8f22483482</span> | sql         |          | v1.0 | 3.8.2     | NULL     | NULL   | 5515718387    |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">1 row in <span class="keyword">set</span> <span class="params">(0.00 sec)</span></span><br></pre></td></tr></table></figure>
+<p>执行更新后如果需要回滚通过<code>liquibase rollback v1.0</code>即可</p>
+<figure class="highlight jboss-cli"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">$ liquibase update</span><br><span class="line">Liquibase Community 3.8.2 by Datical</span><br><span class="line">Liquibase: Update has been successful.</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from DATABASECHANGELOG;</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| ID  | AUTHOR | FILENAME        | DATEEXECUTED        | ORDEREXECUTED | EXECTYPE | MD5SUM                             | DESCRIPTION | COMMENTS | TAG  | LIQUIBASE | CONTEXTS | LABELS | DEPLOYMENT_ID |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| 1.0 | bohan  | myChangeLog.xml | 2019-12-05 03<span class="function">:15</span><span class="function">:18</span> |             1 | EXECUTED | 8<span class="function">:fe52f094e795797c89459e8f22483482</span> | sql         |          | v1.0 | 3.8.2     | NULL     | NULL   | 5515718387    |</span><br><span class="line">| 1.1 | bohan  | myChangeLog.xml | 2019-12-05 03<span class="function">:28</span><span class="function">:06</span> |             2 | EXECUTED | 8<span class="function">:695a5ec0b2b3ddc4a9beeeca530adebc</span> | sql         |          | NULL | 3.8.2     | NULL     | NULL   | 5516486105    |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">2 rows in <span class="keyword">set</span> <span class="params">(0.00 sec)</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">$ liquibase rollback v1.0</span><br><span class="line">Liquibase Community 3.8.2 by Datical</span><br><span class="line">Rolling Back Changeset<span class="function">:myChangeLog.xml</span>:<span class="function">:1.1</span>:<span class="function">:bohan</span></span><br><span class="line">Liquibase: Rollback has been successful.</span><br><span class="line"></span><br><span class="line">mysql&gt; select * from DATABASECHANGELOG;</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| ID  | AUTHOR | FILENAME        | DATEEXECUTED        | ORDEREXECUTED | EXECTYPE | MD5SUM                             | DESCRIPTION | COMMENTS | TAG  | LIQUIBASE | CONTEXTS | LABELS | DEPLOYMENT_ID |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">| 1.0 | bohan  | myChangeLog.xml | 2019-12-05 03<span class="function">:15</span><span class="function">:18</span> |             1 | EXECUTED | 8<span class="function">:fe52f094e795797c89459e8f22483482</span> | sql         |          | v1.0 | 3.8.2     | NULL     | NULL   | 5515718387    |</span><br><span class="line">+<span class="params">-----</span>+<span class="params">--------</span>+<span class="params">-----------------</span>+<span class="params">---------------------</span>+<span class="params">---------------</span>+<span class="params">----------</span>+<span class="params">------------------------------------</span>+<span class="params">-------------</span>+<span class="params">----------</span>+<span class="params">------</span>+<span class="params">-----------</span>+<span class="params">----------</span>+<span class="params">--------</span>+<span class="params">---------------</span>+</span><br><span class="line">1 row in <span class="keyword">set</span> <span class="params">(0.00 sec)</span></span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/database-migrate-java/" rel="tag"># database, migrate, java</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/11/23/title-接口测试框架Karate入门/" rel="prev" title="接口测试框架Karate入门">
+      <i class="fa fa-chevron-left"></i> 接口测试框架Karate入门
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/03/05/title-SpringBoot-actuator监控定时任务执行时间/" rel="next" title="SpringBoot actuator监控定时任务执行时间">
+      SpringBoot actuator监控定时任务执行时间 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+  <div id="disqus_thread"></div>
+  <script>
+
+  var disqus_config = function () {
+    this.page.url = window.location.href;
+    this.page.identifier = "数据库版本管理工具Liquibase";
+  };
+  (function() { // DON'T EDIT BELOW THIS LINE
+  var d = document, s = d.createElement('script');
+  s.src = 'https://bohan.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', +new Date());
+  (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+          </div>
+          
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Liquibase"><span class="nav-number">1.</span> <span class="nav-text">Liquibase</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#安装"><span class="nav-number">1.1.</span> <span class="nav-text">安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#检查JRE"><span class="nav-number">1.1.1.</span> <span class="nav-text">检查JRE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#安装Liquibase"><span class="nav-number">1.1.2.</span> <span class="nav-text">安装Liquibase</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#配置文件"><span class="nav-number">1.1.3.</span> <span class="nav-text">配置文件</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据库升级"><span class="nav-number">1.2.</span> <span class="nav-text">数据库升级</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#通过SQL文件"><span class="nav-number">1.2.1.</span> <span class="nav-text">通过SQL文件</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据库回滚"><span class="nav-number">1.3.</span> <span class="nav-text">数据库回滚</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#版本标记"><span class="nav-number">1.4.</span> <span class="nav-text">版本标记</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">张伯函</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">张伯函</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.9.0
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">Theme – <a href="https://muse.theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.6.0
+  </div>
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script>
+<script src="/js/schemes/muse.js"></script>
+<script src="/js/next-boot.js"></script>
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
